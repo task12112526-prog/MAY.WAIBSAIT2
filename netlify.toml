@@ -1,0 +1,5 @@
+# Serve index.html for client-side routes (React Router BrowserRouter)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
