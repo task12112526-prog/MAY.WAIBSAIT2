@@ -1,105 +1,163 @@
-import { Suspense, useState } from 'react';
-import { Outlet, useLocation, useNavigate, NavLink } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
 import {
-  AccessTimeRounded, ApartmentRounded, BarChartRounded, BadgeRounded,
-  ChevronRightRounded, DashboardRounded, ExpandMoreRounded, Groups2Rounded,
-  LogoutRounded, MenuRounded, PersonOutlineRounded, PaidRounded,
+  AccountBalanceRounded, AccountBalanceWalletRounded, ArticleRounded, AssignmentRounded, BadgeRounded,
+  AccountTreeRounded, CalendarMonthRounded, CampaignRounded, DashboardRounded, GroupsRounded,
+  GavelRounded, HomeWorkRounded, LogoutRounded, MenuRounded, MosqueRounded, PeopleAltRounded,
+  PaymentsRounded, PersonAddAltRounded, PlaceRounded, ReceiptLongRounded, RequestQuoteRounded, ScheduleRounded,
+  VolunteerActivismRounded, WaterDropRounded, WorkHistoryRounded,
 } from '@mui/icons-material';
 import {
-  AppBar, Avatar, Box, Button, Chip, Divider, Drawer, IconButton, List,
-  ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Toolbar,
-  Typography, useMediaQuery,
+  Alert, AppBar, Avatar, Box, Button, Divider, Drawer, FormControl, IconButton, List,
+  ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Toolbar, Tooltip, Typography,
+  Select, useMediaQuery, useTheme,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useI18n } from '../i18n';
 import { useAuth } from '../features/auth/AuthProvider';
-import { supabase } from '../lib/supabase';
-import { LoadingState } from '../components/common';
+import { disableLocalDemo, enableLocalDemo, isLocalDemoEnabled } from '../services/localDemo';
+import type { AppRole } from '../types';
+import { useQueryClient } from '@tanstack/react-query';
+import { useMosqueScope } from '../features/mosques/MosqueScope';
 
-const sidebarWidth = 258;
-const navigation = [
-  { label: 'Overview', path: '/', icon: <DashboardRounded />, roles: ['admin', 'hr_manager', 'employee'] },
-  { label: 'My profile', path: '/profile', icon: <PersonOutlineRounded />, roles: ['admin', 'hr_manager', 'employee'] },
-  { label: 'Attendance summary', path: '/attendance', icon: <AccessTimeRounded />, roles: ['admin', 'hr_manager', 'employee'] },
-  { label: 'Compensation', path: '/payroll', icon: <PaidRounded />, roles: ['admin', 'hr_manager', 'employee'] },
-  { label: 'People', path: '/employees', icon: <Groups2Rounded />, roles: ['admin', 'hr_manager'] },
-  { label: 'Departments', path: '/departments', icon: <ApartmentRounded />, roles: ['admin', 'hr_manager'] },
-  { label: 'Job titles', path: '/job-titles', icon: <BadgeRounded />, roles: ['admin', 'hr_manager'] },
-  { label: 'Reports', path: '/reports', icon: <BarChartRounded />, roles: ['admin', 'hr_manager'] },
-] as const;
+type NavItem = { path: string; label: string; icon: ReactNode; roles: AppRole[] };
+type NavGroup = { title: string; items: NavItem[] };
+const allStaff: AppRole[] = ['admin', 'mosque_manager'];
+const finance: AppRole[] = ['admin', 'mosque_manager', 'accountant'];
+const property: AppRole[] = ['admin', 'mosque_manager', 'property_manager'];
+const community: AppRole[] = ['admin', 'mosque_manager', 'imam', 'committee'];
+const allRoles: AppRole[] = ['admin', 'mosque_manager', 'accountant', 'property_manager', 'imam', 'committee', 'tenant', 'worshipper'];
 
-function roleLabel(role: string) {
-  if (role === 'admin') return 'Administrator';
-  if (role === 'hr_manager') return 'People team';
-  return 'Teammate';
+const navGroups: NavGroup[] = [
+  { title: 'operations', items: [
+    { path: '/', label: 'dashboard', icon: <DashboardRounded />, roles: allRoles },
+    { path: '/staff', label: 'staff', icon: <BadgeRounded />, roles: allStaff },
+    { path: '/staff-interviews', label: 'staffInterviews', icon: <WorkHistoryRounded />, roles: allStaff },
+    { path: '/mosques', label: 'mosqueRegistry', icon: <AccountTreeRounded />, roles: allStaff },
+    { path: '/committees', label: 'mosqueCommittees', icon: <GroupsRounded />, roles: allStaff },
+    { path: '/properties', label: 'properties', icon: <HomeWorkRounded />, roles: property },
+    { path: '/tenants', label: 'tenants', icon: <PeopleAltRounded />, roles: property },
+    { path: '/leases', label: 'leases', icon: <RequestQuoteRounded />, roles: [...property, 'tenant'] },
+    { path: '/rent-dues', label: 'rentDues', icon: <PaymentsRounded />, roles: [...property, 'tenant'] },
+    { path: '/rent-payments', label: 'rentPaid', icon: <ReceiptLongRounded />, roles: [...property, 'tenant', 'accountant'] },
+    { path: '/staff-benefits', label: 'staffBenefits', icon: <BadgeRounded />, roles: allStaff },
+    { path: '/utilities', label: 'utilities', icon: <WaterDropRounded />, roles: [...property, 'tenant'] },
+    { path: '/maintenance', label: 'maintenance', icon: <WorkHistoryRounded />, roles: [...property, 'tenant'] },
+  ] },
+  { title: 'finance', items: [
+    { path: '/banking', label: 'banking', icon: <AccountBalanceRounded />, roles: finance },
+    { path: '/transactions', label: 'transactions', icon: <AccountBalanceWalletRounded />, roles: finance },
+    { path: '/donations', label: 'donations', icon: <VolunteerActivismRounded />, roles: finance },
+    { path: '/staff-payments', label: 'staffPayments', icon: <PaymentsRounded />, roles: finance },
+  ] },
+  { title: 'community', items: [
+    { path: '/prayer-times', label: 'prayer-times', icon: <ScheduleRounded />, roles: allRoles },
+    { path: '/attendance', label: 'attendance', icon: <GroupsRounded />, roles: community },
+    { path: '/worshippers', label: 'worshippers', icon: <PeopleAltRounded />, roles: community },
+    { path: '/programs', label: 'programs', icon: <CalendarMonthRounded />, roles: community },
+    { path: '/registrations', label: 'registrations', icon: <AssignmentRounded />, roles: [...community, 'worshipper'] },
+    { path: '/bookings', label: 'bookings', icon: <PlaceRounded />, roles: allRoles.filter((role) => role !== 'committee') },
+    { path: '/announcements', label: 'announcements', icon: <CampaignRounded />, roles: [...allStaff, 'imam', 'committee'] },
+    { path: '/tenant-notices', label: 'tenantNotices', icon: <ArticleRounded />, roles: [...property, 'tenant'] },
+    { path: '/legal-matters', label: 'legalMatters', icon: <GavelRounded />, roles: ['admin', 'mosque_manager'] },
+  ] },
+  { title: 'administration', items: [
+    { path: '/members', label: 'memberAccounts', icon: <PersonAddAltRounded />, roles: ['admin'] },
+  ] },
+];
+
+function WorkspaceSidebar({ onNavigate }: { onNavigate: () => void }) {
+  const { role } = useAuth();
+  const { t } = useI18n();
+  const visibleGroups = navGroups.map((group) => ({ ...group, items: group.items.filter((item) => role && item.roles.includes(role)) })).filter((group) => group.items.length);
+  return <Box sx={{ width: 276, height: '100%', display: 'flex', flexDirection: 'column', color: '#edf6f1', background: 'linear-gradient(165deg, #123f33 0%, #0e3028 58%, #102b25 100%)' }}>
+    <Box px={2.5} py={2.5}>
+      <Box display="flex" alignItems="center" gap={1.35}>
+        <Box sx={{ width: 42, height: 42, display: 'grid', placeItems: 'center', borderRadius: 2.5, color: '#f5d992', bgcolor: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.14)' }}><MosqueRounded /></Box>
+        <Box><Typography fontWeight={800} lineHeight={1.2}>{t('brand')}</Typography><Typography variant="caption" sx={{ color: 'rgba(237,246,241,.64)' }}>{t('tagline')}</Typography></Box>
+      </Box>
+    </Box>
+    <Divider sx={{ borderColor: 'rgba(237,246,241,.12)' }} />
+    <Box flex={1} overflow="auto" py={1.3}>{visibleGroups.map((group) => <Box key={group.title} mb={1.6}>
+      <Typography variant="overline" sx={{ color: 'rgba(237,246,241,.52)' }} px={2.7} fontWeight={750}>{t(group.title)}</Typography>
+      <List disablePadding sx={{ px: 1.1, mt: 0.35 }}>{group.items.map((item) => <ListItemButton key={item.path} component={NavLink} to={item.path} onClick={onNavigate} end={item.path === '/'} sx={{ borderRadius: 2.5, my: 0.3, minHeight: 44, color: 'rgba(237,246,241,.78)', transition: 'background-color .16s ease, color .16s ease, transform .16s ease', '&:hover': { bgcolor: 'rgba(255,255,255,.08)', color: '#fff', transform: 'translateX(-2px)' }, '&.active': { bgcolor: 'rgba(245,217,146,.16)', color: '#ffe5a7', boxShadow: 'inset -3px 0 #e3bd68', '& .MuiListItemIcon-root': { color: '#f5d992' } } }}>
+        <ListItemIcon sx={{ minWidth: 38, color: 'rgba(237,246,241,.62)' }}>{item.icon}</ListItemIcon><ListItemText primary={t(item.label)} primaryTypographyProps={{ fontSize: 13.5, fontWeight: 620 }} />
+      </ListItemButton>)}</List>
+    </Box>)}</Box>
+    <Divider sx={{ borderColor: 'rgba(237,246,241,.12)' }} />
+    <Typography variant="caption" sx={{ color: 'rgba(237,246,241,.62)' }} p={2}>{t(role ?? 'worshipper')}</Typography>
+  </Box>;
 }
 
-function SidebarContents({ onNavigate }: { onNavigate: () => void }) {
-  const { role, user } = useAuth();
-  const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
-  const navigate = useNavigate();
-  const firstName = user?.user_metadata?.first_name as string | undefined;
-  const lastName = user?.user_metadata?.last_name as string | undefined;
-  const fullName = [firstName, lastName].filter(Boolean).join(' ') || user?.email?.split('@')[0] || 'Your account';
+export default function AppLayout({ children }: { children?: ReactNode }) {
+  const theme = useTheme();
+  const mobile = useMediaQuery(theme.breakpoints.down('lg'));
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [signOutError, setSignOutError] = useState('');
+  const [localDemo, setLocalDemo] = useState(isLocalDemoEnabled);
+  const queryClient = useQueryClient();
+  const { user, role, signOut } = useAuth();
+  const { locale, setLocale, t } = useI18n();
+  const { mosqueId, mosques, isLoading: mosquesLoading, error: mosquesError, setMosqueId } = useMosqueScope();
+  const location = useLocation();
+  const activeItem = navGroups.flatMap((group) => group.items).find((item) => item.path === location.pathname);
 
-  async function logout() {
-    const { error } = await supabase.auth.signOut();
-    setAccountAnchor(null);
-    if (error) console.error('Could not sign out.', error);
-    else navigate('/login', { replace: true });
+  async function handleSignOut() {
+    setSignOutError('');
+    try { await signOut(); }
+    catch { setSignOutError(t('signOutFailed')); }
+    setMenuAnchor(null);
   }
 
-  return <Stack height="100%" px={2} py={2.5}>
-    <Stack direction="row" alignItems="center" gap={1.15} px={1.15} mb={4.3}>
-      <Box className="brand-symbol">p</Box>
-      <Typography sx={{ fontFamily: '"Manrope",sans-serif', fontWeight: 800, letterSpacing: '-0.06em', fontSize: 21 }}>people<span className="brand-accent">OS</span></Typography>
-      <Chip label="HR" size="small" sx={{ height: 21, ml: 0.4, bgcolor: '#f1efff', color: 'primary.main', fontWeight: 750, fontSize: 10 }} />
-    </Stack>
-    <Typography variant="overline" color="text.secondary" px={1.25} mb={0.85} fontSize={10.5} letterSpacing="0.1em" fontWeight={700}>YOUR WORKSPACE</Typography>
-    <List disablePadding sx={{ display: 'grid', gap: 0.55 }}>
-      {navigation.filter((item) => role && (item.roles as readonly string[]).includes(role)).map((item) =>
-        <ListItemButton key={item.path} component={NavLink} to={item.path} end={item.path === '/'} onClick={onNavigate} sx={{
-          minHeight: 46, px: 1.35, borderRadius: 2.5, color: '#7d7d93',
-          '& .MuiListItemIcon-root': { color: 'inherit', minWidth: 39 },
-          '&.active': { bgcolor: '#f0eeff', color: 'primary.main', '& .MuiListItemIcon-root': { color: 'primary.main' }, '& .MuiTypography-root': { fontWeight: 700 } },
-          '&:hover': { bgcolor: '#f7f6ff' },
-        }}><ListItemIcon>{item.icon}</ListItemIcon><ListItemText primary={item.label} primaryTypographyProps={{ fontSize: 13.7, fontWeight: 550 }} /></ListItemButton>)}
-    </List>
-    <Box mt="auto">
-      <Box sx={{ borderRadius: 3, p: 1.5, bgcolor: '#f8f7fd', mb: 1.3 }}><Typography variant="caption" color="text.secondary" display="block" mb={0.9}>NEED A HAND?</Typography><Typography variant="body2" fontWeight={650} mb={1}>We’re happy to help.</Typography><Typography variant="caption" color="text.secondary">Ask your People team if you need anything.</Typography></Box>
-      <Divider sx={{ mb: 1.4 }} />
-      <Button fullWidth onClick={(event) => setAccountAnchor(event.currentTarget)} sx={{ justifyContent: 'flex-start', px: 1, color: 'text.primary' }} endIcon={<ExpandMoreRounded />}>
-        <Avatar sx={{ width: 37, height: 37, mr: 1.2, bgcolor: '#eceaff', color: 'primary.dark', fontSize: 13, fontWeight: 750 }}>{`${firstName?.[0] ?? user?.email?.[0] ?? 'Y'}${lastName?.[0] ?? ''}`.toUpperCase()}</Avatar>
-        <Box textAlign="left" overflow="hidden" flex={1}><Typography variant="body2" fontWeight={700} noWrap>{fullName}</Typography><Typography variant="caption" color="text.secondary">{role ? roleLabel(role) : ''}</Typography></Box>
-      </Button>
-      <Menu anchorEl={accountAnchor} open={Boolean(accountAnchor)} onClose={() => setAccountAnchor(null)}><MenuItem onClick={() => void logout()}><LogoutRounded fontSize="small" sx={{ mr: 1.3 }} />Sign out</MenuItem></Menu>
-    </Box>
-  </Stack>;
-}
+  function toggleLocalDemo() {
+    if (localDemo) disableLocalDemo();
+    else enableLocalDemo();
+    setLocalDemo(!localDemo);
+    window.dispatchEvent(new Event('masjid-demo-mode-changed'));
+    void queryClient.invalidateQueries();
+  }
 
-function HeaderActions() {
-  const { user } = useAuth();
-  const firstName = user?.user_metadata?.first_name as string | undefined;
-  return <Avatar sx={{ width: 33, height: 33, bgcolor: '#eceaff', color: 'primary.dark', fontSize: 12, fontWeight: 750 }}>{firstName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? 'Y'}</Avatar>;
-}
-
-const pageNames: Record<string, string> = { '/': 'Overview', '/profile': 'My profile', '/employees': 'People', '/departments': 'Departments', '/job-titles': 'Job titles', '/attendance': 'Attendance summary', '/payroll': 'Compensation', '/reports': 'Reports' };
-
-export default function AppLayout() {
-  const theme = useTheme();
-  const mobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const location = useLocation();
-  const title = pageNames[location.pathname] ?? 'PeopleOS';
-  return <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-    {mobile ? <Drawer variant="temporary" open={drawerOpen} onClose={() => setDrawerOpen(false)} ModalProps={{ keepMounted: true }} PaperProps={{ sx: { width: sidebarWidth, border: 0 } }}><SidebarContents onNavigate={() => setDrawerOpen(false)} /></Drawer>
-      : <Box component="aside" sx={{ position: 'fixed', inset: '0 auto 0 0', width: sidebarWidth, bgcolor: 'white', borderRight: '1px solid', borderColor: 'divider', zIndex: theme.zIndex.drawer }}><SidebarContents onNavigate={() => {}} /></Box>}
-    <Box sx={{ ml: { xs: 0, md: `${sidebarWidth}px` }, minHeight: '100vh' }}>
-      <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'rgba(255,255,255,.9)', backdropFilter: 'blur(16px)' }}><Toolbar sx={{ minHeight: '65px !important', px: { xs: 2, sm: 3, lg: 4 } }}>
-        {mobile && <IconButton edge="start" onClick={() => setDrawerOpen(true)} aria-label="Open navigation" sx={{ mr: 1 }}><MenuRounded /></IconButton>}
-        <Stack direction="row" alignItems="center" gap={0.9}><Typography variant="body2" color="text.secondary" display={{ xs: 'none', sm: 'block' }}>Your workspace</Typography><ChevronRightRounded fontSize="small" sx={{ color: 'text.secondary', display: { xs: 'none', sm: 'block' } }} /><Typography variant="body2" fontWeight={700}>{title}</Typography></Stack>
-        <Box flex={1} /><HeaderActions />
-      </Toolbar></AppBar>
-      <Box component="main" sx={{ p: { xs: 2, sm: 3, lg: 4 }, maxWidth: 1510, mx: 'auto' }}><Suspense fallback={<LoadingState />}><Outlet /></Suspense></Box>
+  return <Box minHeight="100vh" display="flex">
+    {mobile ? <Drawer variant="temporary" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { border: 0 } }}><WorkspaceSidebar onNavigate={() => setDrawerOpen(false)} /></Drawer>
+      : <Box component="aside" sx={{ width: 276, flexShrink: 0, boxShadow: '8px 0 30px rgba(13, 43, 34, .08)', zIndex: 2 }}><WorkspaceSidebar onNavigate={() => undefined} /></Box>}
+    <Box flex={1} minWidth={0}>
+      <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'rgba(255,255,255,.88)', backdropFilter: 'blur(18px)', boxShadow: '0 4px 24px rgba(20, 52, 39, .035)' }}>
+        <Toolbar sx={{ minHeight: '68px !important', px: { xs: 1.5, md: 3 } }}>
+          {mobile && <IconButton aria-label="Open navigation" onClick={() => setDrawerOpen(true)}><MenuRounded /></IconButton>}
+          <Box flex={1}><Typography variant="caption" color="text.secondary">{t('brand')}</Typography><Typography variant="subtitle1" fontWeight={700}>{t(activeItem?.label ?? 'dashboard')}</Typography></Box>
+          {mosques.length > 0 && <FormControl size="small" sx={{ minWidth: { xs: 120, sm: 210 }, maxWidth: { xs: 150, sm: 280 }, mr: 1 }}>
+            <Select value={mosqueId} onChange={(event) => {
+              setMosqueId(event.target.value);
+              void queryClient.invalidateQueries();
+            }} aria-label={t('selectMosque')}>
+              {mosques.map((mosque) => <MenuItem key={mosque.id} value={mosque.id}>{mosque.name}</MenuItem>)}
+            </Select>
+          </FormControl>}
+          <Button size="small" color="inherit" onClick={() => setLocale(locale === 'ur' ? 'en' : 'ur')}>{locale === 'ur' ? 'English' : 'اردو'}</Button>
+          <Button size="small" variant={localDemo ? 'contained' : 'outlined'} onClick={toggleLocalDemo} sx={{ whiteSpace: 'nowrap' }}>
+            {localDemo ? t('exitLocalDemo') : t('loadLocalDemo')}
+          </Button>
+          <Button
+            size="small"
+            color="inherit"
+            aria-label={t('signOut')}
+            startIcon={<LogoutRounded />}
+            onClick={() => void handleSignOut()}
+            sx={{ minWidth: 0, px: { xs: 0.75, sm: 1.25 }, whiteSpace: 'nowrap' }}
+          >
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{t('signOut')}</Box>
+          </Button>
+          <Tooltip title={user?.email ?? ''}><IconButton sx={{ ml: 0.5 }} onClick={(event) => setMenuAnchor(event.currentTarget)}><Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: 14 }}>{(user?.email?.[0] ?? 'م').toUpperCase()}</Avatar></IconButton></Tooltip>
+          <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}><MenuItem disabled>{role && t(role)}</MenuItem><MenuItem onClick={() => void handleSignOut()}>{t('signOut')}</MenuItem></Menu>
+        </Toolbar>
+      </AppBar>
+      <Box component="main" className="page-enter" sx={{ p: { xs: 2, sm: 2.5, xl: 3.5 }, maxWidth: 1660, mx: 'auto', minHeight: 'calc(100vh - 68px)' }}>
+        {localDemo && <Alert severity="info" sx={{ mb: 2 }}>{t('localDemoNotice')}</Alert>}
+        {mosquesError && <Alert severity="error" sx={{ mb: 2 }}>{mosquesError.message}</Alert>}
+        {!mosquesLoading && !mosquesError && mosques.length === 0 && <Alert severity="warning" sx={{ mb: 2 }}>{t('registerMosqueFirst')}</Alert>}
+        {signOutError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setSignOutError('')}>{signOutError}</Alert>}
+        {children ?? <Outlet />}
+      </Box>
     </Box>
   </Box>;
 }

@@ -1,24 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = "https://qbxivbxiuhgsuqleeylt.supabase.co";
-const supabaseAnonKey = "sb_publishable__FwmxJKbCIIea6jb-SgAGw_4AGh5l8a";
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const isSupabaseConfigured = Boolean(url && key);
 
 export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-    },
-  }
+  url || 'https://not-configured.invalid',
+  key || 'not-configured',
+  { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } },
 );
 
 export function requireSupabaseConfig(): void {
   if (!isSupabaseConfigured) {
-    throw new Error('Supabase is not configured.');
+    throw new Error('Supabase is not configured. Copy .env.example to .env.local and add your project URL and publishable key.');
   }
 }
