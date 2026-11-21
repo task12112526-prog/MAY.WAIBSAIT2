@@ -8,7 +8,7 @@ import {
 } from '@mui/icons-material';
 import {
   Alert, AppBar, Avatar, Box, Button, Divider, Drawer, FormControl, IconButton, List,
-  ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Toolbar, Typography,
+  ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Toolbar, Tooltip, Typography,
   Select, useMediaQuery, useTheme,
 } from '@mui/material';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -73,10 +73,10 @@ function WorkspaceSidebar({ onNavigate }: { onNavigate: () => void }) {
     .filter((group) => group.items.length);
 
   return (
-    <Box sx={{ width: { xs: 260, sm: 276 }, height: '100%', display: 'flex', flexDirection: 'column', color: '#edf6f1', background: 'linear-gradient(165deg, #123f33 0%, #0e3028 58%, #102b25 100%)' }}>
+    <Box sx={{ width: { xs: '82vw', sm: 276 }, maxWidth: 300, height: '100%', display: 'flex', flexDirection: 'column', color: '#edf6f1', background: 'linear-gradient(165deg, #123f33 0%, #0e3028 58%, #102b25 100%)' }}>
       <Box px={2.5} py={2.2}>
         <Box display="flex" alignItems="center" gap={1.35}>
-          <Box sx={{ width: 40, height: 40, display: 'grid', placeItems: 'center', borderRadius: 2.5, color: '#f5d992', bgcolor: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.14)' }}>
+          <Box sx={{ width: 42, height: 42, display: 'grid', placeItems: 'center', borderRadius: 2.5, color: '#f5d992', bgcolor: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.14)' }}>
             <MosqueRounded />
           </Box>
           <Box>
@@ -141,30 +141,33 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
   const queryClient = useQueryClient();
   const { user, role, signOut } = useAuth();
   const { locale, setLocale, t } = useI18n();
-  const { mosqueId, mosques, isLoading: mosquesLoading, setMosqueId } = useMosqueScope();
+  const { mosqueId, mosques, isLoading: mosquesLoading, error: mosquesError, setMosqueId } = useMosqueScope();
   const location = useLocation();
   const activeItem = navGroups.flatMap((group) => group.items).find((item) => item.path === location.pathname);
-  const isUrdu = locale === 'ur';
+  const isRtl = locale === 'ur';
 
   async function handleSignOut() {
     setSignOutError('');
-    try { await signOut(); }
-    catch { setSignOutError(t('signOutFailed')); }
+    try {
+      await signOut();
+    } catch {
+      setSignOutError(t('signOutFailed'));
+    }
     setMenuAnchor(null);
   }
 
   function toggleLocalDemo() {
     if (localDemo) disableLocalDemo();
     else enableLocalDemo();
-    setLocalDemo(isLocalDemoEnabled());
+    setLocalDemo(!localDemo);
     queryClient.invalidateQueries();
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%', bgcolor: '#f4f7f5', overflowX: 'hidden' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%', overflowX: 'hidden', bgcolor: '#f4f7f5' }}>
       {mobile ? (
         <Drawer
-          anchor={isUrdu ? 'right' : 'left'}
+          anchor={isRtl ? 'right' : 'left'}
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           ModalProps={{ keepMounted: true }}
@@ -173,15 +176,10 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
           <WorkspaceSidebar onNavigate={() => setDrawerOpen(false)} />
         </Drawer>
       ) : (
-        <Box component="nav" sx={{ width: 276, flexShrink: 0 }}>
-          <Drawer
-            variant="permanent"
-            anchor={isUrdu ? 'right' : 'left'}
-            open
-            PaperProps={{ sx: { width: 276, border: 'none' } }}
-          >
+        <Box sx={{ width: 276, flexShrink: 0 }}>
+          <Box sx={{ position: 'fixed', top: 0, bottom: 0, width: 276 }}>
             <WorkspaceSidebar onNavigate={() => {}} />
-          </Drawer>
+          </Box>
         </Box>
       )}
 
@@ -189,3 +187,6 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
         <AppBar
           position="sticky"
           elevation={0}
+          sx={{
+            bgcolor: 'rgba(255,255,255,.92)',
+            backdropFilter: 'blur(10px)',
