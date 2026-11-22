@@ -1,3 +1,4 @@
+
 import { useState, type ReactNode } from 'react';
 import {
   AccountBalanceRounded, AccountBalanceWalletRounded, ArticleRounded, AssignmentRounded, BadgeRounded,
@@ -167,6 +168,25 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
     <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%', overflowX: 'hidden', bgcolor: '#f4f7f5' }}>
       {mobile ? (
         <Drawer
+  variant={mobile ? 'temporary' : 'permanent'}
+  open={mobile ? drawerOpen : true}
+  onClose={() => setDrawerOpen(false)}
+  anchor="left"
+  ModalProps={{ keepMounted: true }}
+  sx={{
+    width: mobile ? 0 : 276,
+    flexShrink: 0,
+    '& .MuiDrawer-paper': {
+      width: { xs: '82vw', sm: 276 },
+      maxWidth: 300,
+      boxSizing: 'border-box',
+      border: 0,
+    },
+  }}
+>
+  <WorkspaceSidebar onNavigate={() => setDrawerOpen(false)} />
+</Drawer>
+
           anchor={isRtl ? 'right' : 'left'}
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
