@@ -182,7 +182,19 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
       boxSizing: 'border-box',
       border: 0,
     },
+  }}<Box
+  component="main"
+  sx={{
+    flexGrow: 1,
+    width: '100%',
+    minWidth: 0,
+    p: { xs: 1.5, sm: 3 },
+    pb: { xs: 10, md: 4 },
   }}
+>
+  {children ?? <Outlet />}
+</Box>
+      
 >
   <WorkspaceSidebar onNavigate={() => setDrawerOpen(false)} />
 </Drawer>
