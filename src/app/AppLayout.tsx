@@ -204,7 +204,14 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
       )}
 
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <AppBar
+        <AppBar <Typography
+  variant="h6"
+  noWrap
+  sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 700 }}
+>
+  {t('brand')}
+</Typography>
+
           position="sticky"
           elevation={0}
           sx={{
