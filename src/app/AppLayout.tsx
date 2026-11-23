@@ -1,4 +1,3 @@
-
 import { useState, type ReactNode } from 'react';
 import {
   AccountBalanceRounded, AccountBalanceWalletRounded, ArticleRounded, AssignmentRounded, BadgeRounded,
@@ -168,37 +167,6 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
     <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%', overflowX: 'hidden', bgcolor: '#f4f7f5' }}>
       {mobile ? (
         <Drawer
-  variant={mobile ? 'temporary' : 'permanent'}
-  open={mobile ? drawerOpen : true}
-  onClose={() => setDrawerOpen(false)}
-  anchor="left"
-  ModalProps={{ keepMounted: true }}
-  sx={{
-    width: mobile ? 0 : 276,
-    flexShrink: 0,
-    '& .MuiDrawer-paper': {
-      width: { xs: '82vw', sm: 276 },
-      maxWidth: 300,
-      boxSizing: 'border-box',
-      border: 0,
-    },
-  }}<Box
-  component="main"
-  sx={{
-    flexGrow: 1,
-    width: '100%',
-    minWidth: 0,
-    p: { xs: 1.5, sm: 3 },
-    pb: { xs: 10, md: 4 },
-  }}
->
-  {children ?? <Outlet />}
-</Box>
-      
->
-  <WorkspaceSidebar onNavigate={() => setDrawerOpen(false)} />
-</Drawer>
-
           anchor={isRtl ? 'right' : 'left'}
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
@@ -216,14 +184,7 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
       )}
 
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <AppBar <Typography
-  variant="h6"
-  noWrap
-  sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 700 }}
->
-  {t('brand')}
-</Typography>
-
+        <AppBar
           position="sticky"
           elevation={0}
           sx={{
