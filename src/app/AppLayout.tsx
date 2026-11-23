@@ -8,7 +8,7 @@ import {
 } from '@mui/icons-material';
 import {
   Alert, AppBar, Avatar, Box, Button, Divider, Drawer, FormControl, IconButton, List,
-  ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Toolbar, Tooltip, Typography,
+  ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Toolbar, Typography,
   Select, useMediaQuery, useTheme,
 } from '@mui/material';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -73,8 +73,8 @@ function WorkspaceSidebar({ onNavigate }: { onNavigate: () => void }) {
     .filter((group) => group.items.length);
 
   return (
-    <Box sx={{ width: { xs: '82vw', sm: 276 }, maxWidth: 300, height: '100%', display: 'flex', flexDirection: 'column', color: '#edf6f1', background: 'linear-gradient(165deg, #123f33 0%, #0e3028 58%, #102b25 100%)' }}>
-      <Box px={2.5} py={2.2}>
+    <Box sx={{ width: 276, height: '100%', display: 'flex', flexDirection: 'column', color: '#edf6f1', background: 'linear-gradient(165deg, #123f33 0%, #0e3028 58%, #102b25 100%)' }}>
+      <Box px={2.5} py={2.5}>
         <Box display="flex" alignItems="center" gap={1.35}>
           <Box sx={{ width: 42, height: 42, display: 'grid', placeItems: 'center', borderRadius: 2.5, color: '#f5d992', bgcolor: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.14)' }}>
             <MosqueRounded />
@@ -141,10 +141,10 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
   const queryClient = useQueryClient();
   const { user, role, signOut } = useAuth();
   const { locale, setLocale, t } = useI18n();
-  const { mosqueId, mosques, isLoading: mosquesLoading, error: mosquesError, setMosqueId } = useMosqueScope();
+  const isRtl = locale === 'ur';
+  const { mosqueId, mosques, isLoading: mosquesLoading, setMosqueId } = useMosqueScope();
   const location = useLocation();
   const activeItem = navGroups.flatMap((group) => group.items).find((item) => item.path === location.pathname);
-  const isRtl = locale === 'ur';
 
   async function handleSignOut() {
     setSignOutError('');
@@ -171,7 +171,7 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           ModalProps={{ keepMounted: true }}
-          PaperProps={{ sx: { border: 'none' } }}
+          PaperProps={{ sx: { border: 'none', maxWidth: '82vw' } }}
         >
           <WorkspaceSidebar onNavigate={() => setDrawerOpen(false)} />
         </Drawer>
@@ -188,5 +188,6 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
           position="sticky"
           elevation={0}
           sx={{
-            bgcolor: 'rgba(255,255,255,.92)',
+            bgcolor: 'rgba(255,255,255,.94)',
             backdropFilter: 'blur(10px)',
+            borderBottom: '1px solid #e1ebe5',
